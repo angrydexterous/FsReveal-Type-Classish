@@ -120,7 +120,7 @@ let startWebServer () =
         >=> Writers.setHeader "Expires" "0"
         >=> browseHome ]
     startWebServerAsync serverConfig app |> snd |> Async.Start
-    Process.Start (sprintf "http://localhost:%d/index.html" port) |> ignore
+    Process.Start (sprintf "http://localhost:%d/typeclassish.html" port) |> ignore
 
 Target "GenerateSlides" (fun _ ->
     !! (slidesDir + "/**/*.md")
