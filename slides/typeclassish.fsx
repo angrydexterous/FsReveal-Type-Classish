@@ -150,14 +150,47 @@ let inline map f x = (Fmap $ x) f
 Type classes allow you to define a set of functionality a type must provide so that a function can be run on the type
 
 ***
-
-This is great if we only want to apply our generic functions.  
-But what if we want to use our generic methods on new types?
+### Going Deeper
+Say we want to be able to match only on output types? Use 3 params and overload the ternary operator
+*)
+type Tree<'t> =
+    | Tree of 't * Tree<'t> * Tree<'t>
+    | Leaf of 't
+type ThreeMap = ThreeMap with
+    static member inline (?<-) (x:array<'a>, _Blank:ThreeMap,_:array<'b>) = 
+        fun f -> Array.map f x : 'b array
+    static member inline (?<-) (x:list<'a>, _Blank:ThreeMap,_:list<'b>) = 
+        fun f -> List.map f x : 'b list
+    static member inline (?<-) (x:option<'a>, _Blank:ThreeMap,_:option<'b>) = 
+        fun f -> Option.map f x : 'b option
+    static member inline (?<-) (x:Tree<'a>, _Blank:ThreeMap,_:Tree<'b>) = 
+        fun (f:'a->'b) -> 
+            let rec loop f = function
+                | Leaf x -> Leaf (f x)
+                | Tree (x, t1, t2) -> Tree (f x, loop f t1, loop f t2)
+            loop f x      
+let inline threemap (f:'a->'b) x :^M = (x ? (ThreeMap) <- Unchecked.defaultof< ^M>) f
+(**
+---
+### Applying with the new map function
+*)
+let ma = threemap ((*) 10) [1..3]
+let mb = threemap ((*) 10) [|1..3|]
+let mc = threemap ((*) 10) (Some 3) 
+let mt = threemap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+(*** include-value: ma ***)
+(*** include-value: mb ***)
+(*** include-value: mc ***)
+(*** include-value: mt ***)
+(**
+***
+### But what if we want to add our own new types?
+You can't add new operator overloads through extension types  
+So we must go deeeper
 
 ***
 ### Going Deeper
+#### Looking at FsharpPlus by Gustavo Leon
+
 
 *)
-open Coletto.TypeClassish.Collections.Test
-let dmap = map ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
-(*** include-value: dmap ***)
