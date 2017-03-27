@@ -160,37 +160,6 @@ module Mapping =
     // Functor class ----------------------------------------------------------
 
     [<Extension;Sealed>]
-    type Iterate =
-        [<Extension>]static member Iterate (x:Lazy<'T>  , action) = action x.Value :unit
-        [<Extension>]static member Iterate (x:seq<'T>   , action) = Seq.iter action x
-        [<Extension>]static member Iterate (x:option<'T>, action) = match x with Some x -> action x | _ -> ()
-        [<Extension>]static member Iterate (x:list<'T>  , action) = List.iter action x
-        [<Extension>]static member Iterate ((_:'W, a:'T), action) = action a :unit
-        [<Extension>]static member Iterate (x:'T []     , action) = Array.iter   action x
-        [<Extension>]static member Iterate (x:'T [,]    , action) = Array2D.iter action x
-        [<Extension>]static member Iterate (x:'T [,,]   , action) = Array3D.iter action x
-        [<Extension>]static member Iterate (x:'T [,,,]  , action) =
-                        for i = 0 to Array4D.length1 x - 1 do
-                            for j = 0 to Array4D.length2 x - 1 do
-                                for k = 0 to Array4D.length3 x - 1 do
-                                    for l = 0 to Array4D.length4 x - 1 do
-                                        action x.[i,j,k,l]
-        [<Extension>]static member Iterate (x:Async<'T>           , action) = action (Async.RunSynchronously x) : unit
-        [<Extension>]static member Iterate (x:Choice<'T,'E>       , action) = match x with Choice1Of2 x -> action x | _ -> ()
-        [<Extension>]static member Iterate (KeyValue(_:'Key, x:'T), action) = action x :unit
-        [<Extension>]static member Iterate (x:Dictionary<'Key,'T> , action) = Seq.iter action x.Values
-        [<Extension>]static member Iterate (x:_ ResizeArray       , action) = Seq.iter action x
-
-        // Restricted
-        [<Extension>]static member Iterate (x:string         , action) = String.iter action x
-        [<Extension>]static member Iterate (x:StringBuilder  , action) = String.iter action (x.ToString())
-        [<Extension>]static member Iterate (x:Set<'T>        , action) = Set.iter action x        
-
-        static member inline Invoke (action : 'T->unit) (source : '``Functor<'T>``) : unit =
-            let inline call (_ : ^M, source : ^I) =  ((^M or ^I) : (static member Iterate: _*_ -> _) source, action)
-            call (Unchecked.defaultof<Iterate>, source)
-
-    [<Extension;Sealed>]
     type Map =
         inherit Default1
 
