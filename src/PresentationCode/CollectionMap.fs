@@ -34,9 +34,8 @@ module Mapping =
         static member inline InvokeOnInstance (mapping :'T->'U) (source : 'A) : 'B = 
             (^A : (static member Map: _ * _ -> _) source, mapping)
 
-        [<Extension>]static member Map (x : seq<_>              , f : 'T->'U, [<Optional>]_impl:Default2) = Seq.map f x              : seq<'U>
         static member inline       Map (x : 'A    , f : 'T->'U, [<Optional>]_impl:Default1) = Map.InvokeOnInstance f x : 'B
-
+        [<Extension>]static member Map (x : seq<_>              , f : 'T->'U, [<Optional>]_impl:Default2) = Seq.map f x              : seq<'U>
         [<Extension>]static member Map (x : option<_>      , f : 'T->'U, [<Optional>]_mthd : Map) = Option.map  f x
         [<Extension>]static member Map (x : list<_>        , f : 'T->'U, [<Optional>]_mthd : Map) = List.map f x                        : list<'U>
         [<Extension>]static member Map (x : _ []           , f : 'T->'U, [<Optional>]_mthd : Map) = Array.map   f x
