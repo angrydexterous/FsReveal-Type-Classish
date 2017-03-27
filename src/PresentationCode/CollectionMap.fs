@@ -44,4 +44,4 @@ module Mapping =
         [<Extension>]static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = let d = Dictionary() in Seq.iter (fun (KeyValue(k, v)) -> d.Add(k, f v)) x; d: Dictionary<'Key,'U>
         [<Extension>]static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = Expr.Cast<'U>(Expr.Application(Expr.Value(f),x))
     
-    let inline map (f:'T->'U) (x:'A) :'B = Map.Invoke f x
+    let inline fpmap (f:'T->'U) (x:'A) :'B = Map.Invoke f x

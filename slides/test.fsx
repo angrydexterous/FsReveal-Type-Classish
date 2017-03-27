@@ -11,8 +11,8 @@ type TestType<'a> = TestType of 'a*'a with
         let (TestType(a,b)) = x
         TestType(f a,f b)
 
-map ((*) 10.0) (TestType(5.,5.))
-map ((*) 10) (TestType(5,5))
+fpmap ((*) 10.0) (TestType(5.,5.))
+fpmap ((*) 10) (TestType(5,5))
 
 
 type Tree<'t> =
@@ -24,4 +24,4 @@ type Tree<'t> =
             | Tree (x, t1, t2) -> Tree (f x, loop f t1, loop f t2)
         loop f x
 
-map ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+fpmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))

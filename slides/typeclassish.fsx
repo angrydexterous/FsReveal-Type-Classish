@@ -191,6 +191,103 @@ So we must go deeeper
 ***
 ### Going Deeper
 #### Looking at FsharpPlus by Gustavo Leon
+- Solid up-to-date library
+- Support for a ton of types build-in, with common functions defined (plus a whole lot more)
+- Actively maintained by Gustavo
+- Gustavo contributed PR's in the F# 4.1 to fix bugs and speed things up related to this work
 
+---
+### Stripping away everything
+#### Getting to a minimal subset of code in the library to get an idea of how it works
+*)
+type Default2 = class end
+type Default1 = class inherit Default2 end
+
+type Map =
+    inherit Default1
+
+    static member inline Invoke (mapping :'T->'U) (source : 'A) : 'B = 
+        let inline call (mthd : ^M, source : ^I, _output : ^R) = ((^M or ^I or ^R) : 
+                                (static member Map: _*_*_ -> _) source, mapping, mthd)
+        call (Unchecked.defaultof<Map>, source, Unchecked.defaultof<'B>)
+
+    static member inline InvokeOnInstance (mapping :'T->'U) (source : 'A) : 'B = 
+        (^A : (static member Map: _ * _ -> _) source, mapping)
+
+(**
+---
+### Code Cont'd
+*)
+static member inline       Map (x : 'A        , f : 'T->'U, _impl:Default1) = 
+    Map.InvokeOnInstance f x : 'B
+[<Extension>]static member Map (x : seq<_>    , f : 'T->'U, _impl:Default2) = 
+    Seq.map f x              : seq<'U>
+[<Extension>]static member Map (x : option<_> , f : 'T->'U, _mthd : Map) = 
+    Option.map  f x
+[<Extension>]static member Map (x : list<_>   , f : 'T->'U, _mthd : Map) = 
+    List.map f x                : list<'U>
+[<Extension>]static member Map (x : _ []      , f : 'T->'U, _mthd : Map) = 
+    Array.map   f x
+
+// Restricted -- needed for seq
+[<Extension>]static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = 
+    let d = Dictionary() in Seq.iter (fun (KeyValue(k, v)) -> 
+        d.Add(k, f v)) x; d: Dictionary<'Key,'U>
+[<Extension>]static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = 
+    Expr.Cast<'U>(Expr.Application(Expr.Value(f),x))
+(**
+---
+### The heart of it all
+#### Map
+*)
+let inline map (f:'T->'U) (x:'A) :'B = Map.Invoke f x
+(**
+***
+### Before we dive in
+#### A demo
+*)
+
+#r "../src/build/PresentationCode.dll"
+open Coletto.TypeClassish.Collections.Mapping
+
+let afp = fpmap ((+) 10) (Some 3)
+let bfp = fpmap ((+) 10) [|1..3|]
+let cfp = fpmap ((+) 10) {1..3} 
+
+(*** include-value: afp ***)
+(*** include-value: bfp ***)
+(*** include-value: cfp ***)
+
+(**
+---
+### Demo Cont'd
+*)
+type TestType<'a> = TestType of 'a*'a with
+    static member Map (x:TestType<_>, f : 'T->'U) = 
+        let (TestType(a,b)) = x
+        TestType(f a,f b)
+
+let dfp = fpmap ((*) 10.0) (TestType(5.,5.))
+let efp = fpmap ((*) 10) (TestType(5,5))
+(*** include-value: dfp ***)
+(*** include-value: efp ***)
+(**
+---
+### Demo Cont'd
+*)
+type Tree<'t> =
+    | Tree of 't * Tree<'t> * Tree<'t>
+    | Leaf of 't
+    static member Map (x:Tree<'a>, f) = 
+        let rec loop f = function
+            | Leaf x -> Leaf (f x)
+            | Tree (x, t1, t2) -> Tree (f x, loop f t1, loop f t2)
+        loop f x
+
+let ffp = fpmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+(*** include-value: ffp ***)
+(**
+***
+### Exploration of the code
 
 *)
