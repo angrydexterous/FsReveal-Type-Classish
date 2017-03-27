@@ -34,12 +34,9 @@ module Mapping =
         [<Extension>]static member Map (x : option<_>      , f : 'T->'U, _mthd : Map) = Option.map  f x
         [<Extension>]static member Map (x : list<_>        , f : 'T->'U, _mthd : Map) = List.map f x   : list<'U>
         [<Extension>]static member Map (x : _ []           , f : 'T->'U, _mthd : Map) = Array.map   f x
-        
 
         // Restricted
         [<Extension>]static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = Expr.Cast<'U>(Expr.Application(Expr.Value(f),x))
         [<Extension>]static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = let d = Dictionary() in Seq.iter (fun (KeyValue(k, v)) -> d.Add(k, f v)) x; d: Dictionary<'Key,'U>     
-
-
 
     let inline map    (f:'T->'U) (x:'``Functor<'T>``) :'``Functor<'U>`` = Map.Invoke f x
