@@ -19,6 +19,11 @@
 * @willisbueller
 * github/angrydexterous
 
+---
+### More intro
+* Presentation available at [https://angrydexterous.github.io/typeclassish.html#/](https://angrydexterous.github.io/typeclassish.html#/)
+* Code available at [https://github.com/angrydexterous/FsReveal-Type-Classish](https://github.com/angrydexterous/FsReveal-Type-Classish)
+
 ***
 ### Type-Classes
 #### Why should I care?
