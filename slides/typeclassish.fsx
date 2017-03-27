@@ -33,7 +33,7 @@
 
 > <p>Parametric polymorphism (...), allows a single piece of code to be typed “generically,” using variables in place of actual types, and then instantiated with particular types as needed. Parametric definitions are uniform: all of their instances behave the same. (...) </p>TAPL , §23.2:
 
-*** 
+--- 
 ### Parametric Polymorphism (Not Type Classes)
 #### Example [rosettacode](https://rosettacode.org/wiki/Parametric_polymorphism#F.23)
 *)
@@ -54,27 +54,23 @@ let t2 = t1.Map(fun x -> x * 10)
 TAPL
 > <p>Ad-hoc polymorphism, by contrast, allows a polymorphic value to exhibit different behaviors when “viewed” at different types. The most common example of ad-hoc polymorphism is overloading, which associates a single function symbol with many implementations; the compiler (or the runtime system, depending on whether overloading resolution is static or dynamic) chooses an appropriate implementation for each application of the function, based on the types of the arguments.  </p>TAPL , §23.2:
 
-***
+---
 ### Ad-Hoc Polymorphism (Type Classes)
-#### Example Operator Overloading [Microsoft](https://docs.microsoft.com/en-us/dotnet/articles/fsharp/language-reference/operator-overloading)
+#### Example Operator Overloading [Gustavo Leon](http://nut-cracker.azurewebsites.net/blog/category/f/)
 
 *)
-type Vector(x: float, y : float) =
-   member this.x = x
-   member this.y = y
-   static member (~-) (v : Vector) =
-     Vector(-1.0 * v.x, -1.0 * v.y)
-   static member (*) (v : Vector, a) =
-     Vector(a * v.x, a * v.y)
-   static member (*) (a, v: Vector) =
-     Vector(a * v.x, a * v.y)
-   override this.ToString() =
-     this.x.ToString() + " " + this.y.ToString()
+type Vector2D<'a> = Vector2D of 'a * 'a with
+    static member inline (~-.) (Vector2D(a1,a2))    = 
+        Vector2D (-a1 , -a2)
+ 
+type Vector3D<'a> = Vector3D of 'a * 'a * 'a with
+    static member inline (~-.) (Vector3D(a1,a2,a3)) = 
+        Vector3D (-a1, -a2, -a3)
+let a =   -. (Vector2D (1.0,2.0))
+let b =   -. (Vector3D (1.0,2.0,3.0))
+(*** include-value: a ***)
+(*** include-value: b ***)
 
-let v1 = Vector(1.0, 2.0)
-
-let v2 = v1 * 2.0
-let v3 = 2.0 * v1
 (**
 ***
 ### Extending this to mimic Haskell Type Classes
@@ -82,9 +78,86 @@ let v3 = 2.0 * v1
 *)
 #r "../src/build/PresentationCode.dll"
 open Coletto.TypeClassish.Collections
-let a = map id [1..3]
-let b = map id [|1..3|]
-let c = map id {1..3}
-(*** include-value: a ***)
-(*** include-value: b ***)
-(*** include-value: c ***)
+let amap = map id [1..3]
+let bmap = map id [|1..3|]
+let cmap = map id {1..3} 
+(*** include-value: amap ***)
+(*** include-value: bmap ***)
+(*** include-value: cmap ***)
+
+(** 
+***
+### What???
+#### How'd that work? <img style="border: none; height:1em;padding-bottom:0em !important;margin:0 !important" src="images/open_mouth.png" />
+*)
+type Fmap = Fmap with
+    static member ($) (Fmap, x:array<_>) = fun f -> Array.map f x
+    static member ($) (Fmap, x:list<_>  ) = fun f -> List.map f x
+    static member ($) (Fmap, x:seq<_>  ) = fun f -> Seq.map f x
+
+let inline map f x = (Fmap $ x) f
+(**
+***
+### How that works
+#### Operators
+> They have a particular behavior, at operator resolution the compiler looks in every operand class, so for example if we have a binary operator $ : (‘a,’b) -> ‘c it looks first into class ‘a then into class ‘b for the operator definition.
+So the trick is we will use an intermediary class with an operator with overloads for the second parameter.
+[Gustavo Leon](http://nut-cracker.azurewebsites.net/blog/category/f/)
+
+***
+### Inline Methods with Operator Overloading
+#### Introduction [Anton Tayanovskyy](http://t0yv0.blogspot.com/2011/12/hacking-type-classes-in-f.html)
+> To cut the long story short, before compiling to .NET F# expands methods declared inline and does overload resolution. This was intended to support flexible operator overloading, but opens up the door for interesting hacks. Even code that generalizes over higher kinds and therefore cannot exist at .NET level can with these hacks exist at the inline F# level.
+
+---
+### Inline Example
+*)
+let exampleFunction a b = a + b
+let x = exampleFunction 1 2
+let y = exampleFunction 1.0 2.0 // Error
+(**
+val exampleFunction : a:int -> b:int -> int //Determined by first call  
+> severity: 'Error'
+> message: 'This expression was expected to have type
+>     'int'
+> but here has type
+>     'float'
+
+---
+### Corrected with inline
+*)
+let inline exampleFunction' a b = a + b
+let x' = exampleFunction' 1 2
+let y' = exampleFunction' 1.0 2.0 
+(*** include-value: x' ***)
+(*** include-value: y' ***)
+(**
+Statically resolved:  
+val inline exampleFunction' :
+  a: ^a -> b: ^b ->  ^c
+    when ( ^a or  ^b) : (static member ( + ) :  ^a *  ^b ->  ^c)
+
+***
+### So back to type classes
+*)
+type Fmap = Fmap with
+    static member ($) (Fmap, x:array<_>) = fun f -> Array.map f x
+    static member ($) (Fmap, x:list<_>  ) = fun f -> List.map f x
+    static member ($) (Fmap, x:seq<_>  ) = fun f -> Seq.map f x
+
+let inline map f x = (Fmap $ x) f
+(** 
+Type classes allow you to define a set of functionality a type must provide so that a function can be run on the type
+
+***
+
+This is great if we only want to apply our generic functions.  
+But what if we want to use our generic methods on new types?
+
+***
+### Going Deeper
+
+*)
+open Coletto.TypeClassish.Collections.Test
+let dmap = map ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+(*** include-value: dmap ***)
