@@ -20,9 +20,47 @@
 * github/angrydexterous
 
 ***
+### Type-Classes
+#### Why should I care?
+##### Simplest Example
+*)
+[1..100]
+|> List.map ((+) 10)
+|> List.filter (fun x -> (x % 2) = 0)
+|> List.map ((*) 2)
+|> List.toArray
+|> Array.reduce (fun a x -> a + x)
 
-### What are type classes?
-#### Ad-Hoc Polymorphism
+(**
+
+Ah Crap! I wanted to start with a seq  
+
+---
+### Slightly more complex example
+#### Courtesy [Eugene Tolmachev, Fyodor Soikin, Gustavo Leon](http://stackoverflow.com/questions/42598677/what-is-the-best-way-to-pass-generic-function-that-resolves-to-multiple-types)
+*)
+let y f =
+    let a = f 1
+    let b = f 2L
+    (a,b)
+
+(**
+
+No good\.  
+f is automatically inferred by first call with type int
+
+---
+### Complex Example
+#### Monad Transformers
+...You're going to have to read 5 blog articles ([Here's a good one to start with](https://wiki.haskell.org/index.php?title=Monad%20Transformers%20Explained&action=edit)) and a few academic papers on the subject, but the gist of it is below (taken from that example), and it's doable in FSharp today with the FSharpPlus library
+
+Basically though, you can stack Monads.  
+For instance -> Stack a IO (async) with a Reader to do configuration injection on an async server you're writing.
+
+***
+
+### So what are type classes?
+#### They are Ad-Hoc Polymorphism
 * Operator or function overloading with constraints
  - "This function will run on Type X if Type X implements foo"
 * Contrasts with Parametric Polymorphism
@@ -195,9 +233,10 @@ So we must go deeeper
 - Support for a ton of types build-in, with common functions defined (plus a whole lot more)
 - Actively maintained by Gustavo
 - Gustavo contributed PR's in the F# 4.1 to fix bugs and speed things up related to this work
+- Moves from operator overloading to method overloading
 
 ---
-### Stripping away everything
+### Stripping away everything - A Brief Peek at FSharpPlus
 #### Getting to a minimal subset of code in the library to get an idea of how it works
 *)
 type Default2 = class end
@@ -316,6 +355,45 @@ static member inline Map (x : 'A , f : 'T->'U, _impl:Default1) =
 ### Deeper dive on Types with Single Map member
 #### Define a function that allows us to map on our own Types
 *)
+let inline nsmap (mapping :'T->'U) (source : 'A) : 'B =  
+    (^A : (static member Map: _ * _ -> _) source, mapping)
+(**
+That's it. 
+
+Take a function 'T->'U and a source type 'A and spit back out 'B
+Static member constraint specified that type A has to define Map with type \_*\_ -> _
+
+---
+### Let's run our tree through it
+*)
+let inline nsmap (mapping :'T->'U) (source : 'A) : 'B =  
+    (^A : (static member Map: _ * _ -> _) source, mapping)
+type Tree<'t> =
+    | Tree of 't * Tree<'t> * Tree<'t>
+    | Leaf of 't
+    static member Map (x:Tree<'a>, f) = 
+        let rec loop f = function
+            | Leaf x -> Leaf (f x)
+            | Tree (x, t1, t2) -> Tree (f x, loop f t1, loop f t2)
+        loop f x
+
+let nsres = nsmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+(*** include-value: nsres ***)
+(**
+
+Good!
+
+---
+
+### Clean up the sig
+We can use quotations to clean the signature up a little if we like too
+
+<img style="border: none; height:3em;padding-bottom:0em !important;margin:0 !important" src="images/nsmap.png" />
+
+---
+### Let's bring that back into a type as a helper function
+*)
+
 type Map =
     static member inline InvokeOnInstance (mapping :'T->'U) (source : 'A) : 'B = 
         (^A : (static member Map: _ * _ -> _) source, mapping)
@@ -325,3 +403,9 @@ let inline fsmap (f:'T->'U) (x:'A) :'B = Map.InvokeOnInstance f x
 //Re-Use the old Tree Type
 let ffs = fsmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
 (*** include-value: ffs ***)
+(**
+---
+### Now let's work on Types with overloads
+
+
+*)

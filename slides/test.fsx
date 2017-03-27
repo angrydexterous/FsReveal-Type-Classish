@@ -23,10 +23,10 @@ type Tree<'t> =
             | Leaf x -> Leaf (f x)
             | Tree (x, t1, t2) -> Tree (f x, loop f t1, loop f t2)
         loop f x
-    static member Map (x:array<_>, f)=
-        x
 
 fpmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
 
 open Coletto.TypeClassish.Collections.FromScratch
 fsmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+open Coletto.TypeClassish.Collections.NewScratch
+nsmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))

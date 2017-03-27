@@ -53,3 +53,6 @@ module FromScratch =
             (^A : (static member Map: _ * _ -> _) source, mapping)
 
     let inline fsmap (f:'T->'U) (x:'A) :'B = Map.InvokeOnInstance f x
+
+module NewScratch = 
+    let inline nsmap (mapping :'T->'U) (source : 'A) : 'B =  (^A : (static member Map: _ * _ -> _) source, mapping)
