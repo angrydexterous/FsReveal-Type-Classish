@@ -1,7 +1,7 @@
 #r "../src/build/PresentationCode.dll"
-open Coletto.TypeClassish.Collections.Mapping
+open Coletto.TypeClassish.Collections.Base
 
-fpmap ((+) 10) (Some 3)
+simplemap ((+) 10) (Some 3)
 fpmap ((+) 10) [|1..3|]
 fpmap ((+) 10) {1..3} 
 

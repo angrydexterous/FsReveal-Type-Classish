@@ -8,6 +8,7 @@ open System.Collections.Generic
 open System.Threading.Tasks
 open Microsoft.FSharp.Quotations
 
+
 module Base = 
     type WillMap = WillMap with
         static member inline (?<-) (x:array<_>, _Blank:WillMap,_:array<'b>) = fun f -> Array.map f x 
@@ -15,7 +16,7 @@ module Base =
         static member inline (?<-) (x:option<_>, _Blank:WillMap,_:option<'b>) = fun f -> Option.map f x
         
 
-    let inline map (f:'a->'b) x :^M = (x ? (WillMap) <- Unchecked.defaultof< ^M>) f
+    let inline simplemap (f:'a->'b) x :^M = (x ? (WillMap) <- Unchecked.defaultof< ^M>) f
 
 
 
@@ -56,3 +57,4 @@ module FromScratch =
 
 module NewScratch = 
     let inline nsmap (mapping :'T->'U) (source : 'A) : 'B =  (^A : (static member Map: _ * _ -> _) source, mapping)
+

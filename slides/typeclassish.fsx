@@ -43,6 +43,7 @@ Ah Crap! I wanted to start with a seq
 ---
 ### Slightly more complex example
 #### Courtesy [Eugene Tolmachev, Fyodor Soikin, Gustavo Leon](http://stackoverflow.com/questions/42598677/what-is-the-best-way-to-pass-generic-function-that-resolves-to-multiple-types)
+I want to pass in f which can operate on multiple datatypes
 *)
 let y f =
     let a = f 1
@@ -52,7 +53,7 @@ let y f =
 (**
 
 No good\.  
-f is automatically inferred by first call with type int
+f is automatically inferred by the first call (with type int)
 
 ---
 ### Complex Example
@@ -119,11 +120,14 @@ let b =   -. (Vector3D (1.0,2.0,3.0))
 ### Extending this to mimic Haskell Type Classes
 
 *)
+
 #r "../src/build/PresentationCode.dll"
-open Coletto.TypeClassish.Collections
-let amap = map id [1..3]
-let bmap = map id [|1..3|]
-let cmap = map id {1..3} 
+open Coletto.TypeClassish.Collections.Base
+
+let amap = simplemap ((+) 10) [1..3]
+let bmap = simplemap ((+) 10) [|1..3|]
+let cmap = simplemap ((+) 10) (Some 3)
+
 (*** include-value: amap ***)
 (*** include-value: bmap ***)
 (*** include-value: cmap ***)
@@ -136,24 +140,24 @@ let cmap = map id {1..3}
 type Fmap = Fmap with
     static member ($) (Fmap, x:array<_>) = fun f -> Array.map f x
     static member ($) (Fmap, x:list<_>  ) = fun f -> List.map f x
-    static member ($) (Fmap, x:seq<_>  ) = fun f -> Seq.map f x
+    static member ($) (Fmap, x:option<_>  ) = fun f -> Option.map f x
 
 let inline map f x = (Fmap $ x) f
 (**
-***
+---
 ### How that works
-#### Operators
+#### Operator Overloading
 > They have a particular behavior, at operator resolution the compiler looks in every operand class, so for example if we have a binary operator $ : (‘a,’b) -> ‘c it looks first into class ‘a then into class ‘b for the operator definition.
 So the trick is we will use an intermediary class with an operator with overloads for the second parameter.
 [Gustavo Leon](http://nut-cracker.azurewebsites.net/blog/category/f/)
 
 ***
-### Inline Methods with Operator Overloading
+### Digression: Inline Methods with Operator Overloading
 #### Introduction [Anton Tayanovskyy](http://t0yv0.blogspot.com/2011/12/hacking-type-classes-in-f.html)
 > To cut the long story short, before compiling to .NET F# expands methods declared inline and does overload resolution. This was intended to support flexible operator overloading, but opens up the door for interesting hacks. Even code that generalizes over higher kinds and therefore cannot exist at .NET level can with these hacks exist at the inline F# level.
 
 ---
-### Inline Example
+### Non-Inline Problem Example
 *)
 let exampleFunction a b = a + b
 let x = exampleFunction 1 2
@@ -176,9 +180,9 @@ let y' = exampleFunction' 1.0 2.0
 (*** include-value: y' ***)
 (**
 Statically resolved:  
-val inline exampleFunction' :
-  a: ^a -> b: ^b ->  ^c
-    when ( ^a or  ^b) : (static member ( + ) :  ^a *  ^b ->  ^c)
+> val inline exampleFunction' :
+>   a: ^a -> b: ^b ->  ^c
+>     when ( ^a or  ^b) : (static member ( + ) :  ^a *  ^b ->  ^c)
 
 ***
 ### So back to type classes
@@ -190,11 +194,25 @@ type Fmap = Fmap with
 
 let inline map f x = (Fmap $ x) f
 (** 
-Type classes allow you to define a set of functionality a type must provide so that a function can be run on the type
+> val inline map :  
+>   f:'a -> x: ^b -> 'c  
+>     when (Fmap or  ^b) : (static member ( $ ) : Fmap *  ^b -> 'a -> 'c)  
 
-***
+Type classes allow you to define a set of functionality a type must provide so that a function can be run on the type.  
+- Note our map function requires static member $ with a particular signature. That's how we're getting type class support
+
+---
+
 ### Going Deeper
-Say we want to be able to match only on output types? Use 3 params and overload the ternary operator
+#### We have an ability to now match on a function with a single input type, and no mention of an output type.  
+What if we only have an output type? Or what if we care about input and output type?  
+
+---
+Use a 3 parameter operator and overload it. The ternary operator fits the bill.  
+For unary functions we can just ignore an extra parameter. In the below case we are using the 3rd param just to match with the output type of the
+mapping function, and then ignoring it (see unchecked.defaultof below)
+
+---
 *)
 type Tree<'t> =
     | Tree of 't * Tree<'t> * Tree<'t>
@@ -237,7 +255,7 @@ So we must go deeeper
 - Solid up-to-date library
 - Support for a ton of types build-in, with common functions defined (plus a whole lot more)
 - Actively maintained by Gustavo
-- Gustavo contributed PR's in the F# 4.1 to fix bugs and speed things up related to this work
+- Gustavo contributed PR's in F# 4.1 to fix bugs and speed things up related to this work
 - Moves from operator overloading to method overloading
 
 ---
@@ -332,7 +350,7 @@ let ffp = fpmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
 (*** include-value: ffp ***)
 (**
 ***
-### Looking at the Code
+### Looking at the help functions in FSharpPlus
 
 
 *)
@@ -397,6 +415,7 @@ We can use quotations to clean the signature up a little if we like too
 
 ---
 ### Let's bring that back into a type as a helper function
+...which brings it back identically to the helper type in FSharpPlus's Map Type
 *)
 
 type Map =
@@ -409,8 +428,77 @@ let inline fsmap (f:'T->'U) (x:'A) :'B = Map.InvokeOnInstance f x
 let ffs = fsmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
 (*** include-value: ffs ***)
 (**
----
+***
 ### Now let's work on Types with overloads
+#### The important bits in FSharpPlus
+*)
+type Default2 = class end
+type Default1 = class inherit Default2 end
 
+[<Extension;Sealed>]
+type Map =
+    inherit Default1
 
+    static member inline Invoke (mapping :'T->'U) (source : 'A) : 'B = 
+        let inline call (mthd : ^M, source : ^I, _output : ^R) = 
+            ((^M or ^I or ^R) : (static member Map: _*_*_ -> _) source, mapping, mthd)
+        call (Unchecked.defaultof<Map>, source, Unchecked.defaultof<'B>)
+
+let inline fpmap (f:'T->'U) (x:'A) :'B = Map.Invoke f x
+(**
+---
+*)
+type Default2 = class end
+type Default1 = class inherit Default2 end
+(**
+Are used to help the compiler align which overloads to call.
+Let's take a look at how this works in FSharpPlus
+
+---
+
+*)
+static member Map (x : seq<_>    , f : 'T->'U, _impl:Default2) = 
+    Seq.map f x              : seq<'U>
+static member Map (x : option<_> , f : 'T->'U, _mthd : Map)    = 
+    Option.map  f x
+
+(**
+- The third parameter is an unused param of type Default2(where Default2 <- Default1 <- Map).  
+-- In most cases it's typed to the current class.  
+- In seq's case, it's kicked up the class hierarchy to default2.  
+
+I still can't say why for sure at this point, but this appears to be used to type methods back to this class, and in some cases massage 
+the type checker and compiler back into compliance with what we're trying to do.  
+More on the last part in the next slide...
+
+---
+### Seq messed things up. Other things probably do too.
+Having seq in the mix messes up the typing of the generic map function by forcing it to be constrained to the seq type. 
+We actually hit this problem in our above operator overloading methods, but I cut sequence out to save the discussion for this slide.  
+*)
+// Restricted -- needed for seq
+static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = 
+    let d = Dictionary() in Seq.iter 
+        (fun (KeyValue(k, v)) -> d.Add(k, f v)) x; d: Dictionary<'Key,'U>
+static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = 
+    Expr.Cast<'U>(Expr.Application(Expr.Value(f),x))
+(**
+The above code fixes the type inference on map when seq is added... Not entire sure why. But it does.  
+Without it, map won't work for anything other than a sequence
+
+---
+### That's it. 
+With the code we just covered we're back at the minimum generic mapping Type we showed code to earlier
+
+***
+# The End
+
+<img style="border: none; height:3em; padding-left:5em" src="images/fsharp.png" alt="FSharp logo" />
+<img style="border: none; height:3em; padding-left:5em" src="images/Prolucid-Logo-White.png" alt="Prolucid logo" />
+<br />
+Questions?
+
+* William Coletto
+* @willisbueller
+* github/angrydexterous
 *)
