@@ -26,9 +26,9 @@ module Mapping =
     [<Extension;Sealed>]
     type Map =
 
-        static member inline Invoke (mapping :'T->'U) (source : '``Functor<'T>``) : '``Functor<'U>`` = 
+        static member inline Invoke (mapping :'T->'U) (source : 'A) : 'B = 
             let inline call (mthd : ^M, source : ^I, _output : ^R) = ((^M or ^I or ^R) : (static member Map: _*_*_ -> _) source, mapping, mthd)
-            call (Unchecked.defaultof<Map>, source, Unchecked.defaultof<'``Functor<'U>``>)
+            call (Unchecked.defaultof<Map>, source, Unchecked.defaultof<'B>)
 
         [<Extension>]static member Map (x : seq<_>         , f : 'T->'U, _mthd : Map) = Seq.map f x : seq<'U>
         [<Extension>]static member Map (x : option<_>      , f : 'T->'U, _mthd : Map) = Option.map  f x
@@ -39,4 +39,4 @@ module Mapping =
         [<Extension>]static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = Expr.Cast<'U>(Expr.Application(Expr.Value(f),x))
         [<Extension>]static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = let d = Dictionary() in Seq.iter (fun (KeyValue(k, v)) -> d.Add(k, f v)) x; d: Dictionary<'Key,'U>     
 
-    let inline map    (f:'T->'U) (x:'``Functor<'T>``) :'``Functor<'U>`` = Map.Invoke f x
+    let inline map    (f:'T->'U) (x:'A) :'B = Map.Invoke f x
