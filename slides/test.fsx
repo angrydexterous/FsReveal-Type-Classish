@@ -1,10 +1,4 @@
 #r "../src/build/PresentationCode.dll"
-open System.Runtime.CompilerServices
-open System.Runtime.InteropServices
-open System.Text
-open System.Collections.Generic
-open System.Threading.Tasks
-open Microsoft.FSharp.Quotations
 open Coletto.TypeClassish.Collections.Mapping
 
 map ((+) 10) (Some 3)
