@@ -218,22 +218,22 @@ type Map =
 ---
 ### Code Cont'd
 *)
-static member inline       Map (x : 'A        , f : 'T->'U, _impl:Default1) = 
+static member inline Map (x : 'A , f : 'T->'U, _impl:Default1) = 
     Map.InvokeOnInstance f x : 'B
-[<Extension>]static member Map (x : seq<_>    , f : 'T->'U, _impl:Default2) = 
+static member Map (x : seq<_>    , f : 'T->'U, _impl:Default2) = 
     Seq.map f x              : seq<'U>
-[<Extension>]static member Map (x : option<_> , f : 'T->'U, _mthd : Map) = 
+static member Map (x : option<_> , f : 'T->'U, _mthd : Map)    = 
     Option.map  f x
-[<Extension>]static member Map (x : list<_>   , f : 'T->'U, _mthd : Map) = 
-    List.map f x                : list<'U>
-[<Extension>]static member Map (x : _ []      , f : 'T->'U, _mthd : Map) = 
+static member Map (x : list<_>   , f : 'T->'U, _mthd : Map)    = 
+    List.map f x             : list<'U>
+static member Map (x : _ []      , f : 'T->'U, _mthd : Map)    = 
     Array.map   f x
 
 // Restricted -- needed for seq
-[<Extension>]static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = 
-    let d = Dictionary() in Seq.iter (fun (KeyValue(k, v)) -> 
-        d.Add(k, f v)) x; d: Dictionary<'Key,'U>
-[<Extension>]static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = 
+static member Map (x : Dictionary<_,_>, f : 'T->'U, _mthd : Map) = 
+    let d = Dictionary() in Seq.iter 
+        (fun (KeyValue(k, v)) -> d.Add(k, f v)) x; d: Dictionary<'Key,'U>
+static member Map (x : Expr<'T>       , f : 'T->'U, _mthd : Map) = 
     Expr.Cast<'U>(Expr.Application(Expr.Value(f),x))
 (**
 ---
@@ -288,6 +288,40 @@ let ffp = fpmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
 (*** include-value: ffp ***)
 (**
 ***
-### Exploration of the code
+### Looking at the Code
+
 
 *)
+
+// Handles Types with overloaded Map
+static member inline Invoke (mapping :'T->'U) (source : 'A) : 'B = 
+    let inline call (mthd : ^M, source : ^I, _output : ^R) = ((^M or ^I or ^R) : 
+                            (static member Map: _*_*_ -> _) source, mapping, mthd)
+    call (Unchecked.defaultof<Map>, source, Unchecked.defaultof<'B>)
+
+// Handles Types with a single Map
+static member inline InvokeOnInstance (mapping :'T->'U) (source : 'A) : 'B = 
+    (^A : (static member Map: _ * _ -> _) source, mapping)
+
+// Related to the single map case
+static member inline Map (x : 'A , f : 'T->'U, _impl:Default1) = 
+    Map.InvokeOnInstance f x : 'B
+
+(**
+***
+### Let's focus on the case of generic Map on your own Type
+#### With a non-overloaded Map member
+
+---
+### Deeper dive on Types with Single Map member
+#### Define a function that allows us to map on our own Types
+*)
+type Map =
+    static member inline InvokeOnInstance (mapping :'T->'U) (source : 'A) : 'B = 
+        (^A : (static member Map: _ * _ -> _) source, mapping)
+
+let inline fsmap (f:'T->'U) (x:'A) :'B = Map.InvokeOnInstance f x
+
+//Re-Use the old Tree Type
+let ffs = fsmap ((*) 10) (Tree(6, Tree(2, Leaf 1, Leaf 3), Leaf 9))
+(*** include-value: ffs ***)
